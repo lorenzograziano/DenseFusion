@@ -1,6 +1,5 @@
 import argparse
 from random import randint
-
 import cv2
 import numpy as np
 import torch.utils.data
@@ -8,7 +7,9 @@ from torch.autograd import Variable
 from datasets.linemod.linemod_cat_sim import PoseDataset as PoseDataset_linemod
 from lib.knn.__init__ import KNearestNeighbor
 from lib.network import PoseNet, PoseRefineNet
+from lib.transformations import quaternion_matrix, quaternion_from_matrix
 from tools.draw_cloud_point import convert3dpointto2d, convert_coordinates
+import copy
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset_root', type=str, default='', help='dataset root dir')
@@ -17,25 +18,24 @@ parser.add_argument('--refine_model', type=str, default='', help='resume PoseRef
 opt = parser.parse_args()
 
 num_objects = 13
-objlist = [1, 2, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15]
 num_points = 500
+refinement = True
 iteration = 2
 bs = 1
-dataset_config_dir = '/home/lorenzo/PycharmProjects/DenseFusionNew/datasets/linemod/dataset_config'
-output_result_dir = '/home/lorenzo/PycharmProjects/DenseFusionNew/experiments/eval_result/linemod'
-knn = KNearestNeighbor(1)
+
 
 estimator = PoseNet(num_points=num_points, num_obj=num_objects)
 estimator.cuda()
+estimator.load_state_dict(torch.load(opt.model))
+estimator.eval()
+
 refiner = PoseRefineNet(num_points=num_points, num_obj=num_objects)
 refiner.cuda()
-estimator.load_state_dict(torch.load(opt.model))
 refiner.load_state_dict(torch.load(opt.refine_model))
-estimator.eval()
 refiner.eval()
 
 data = PoseDataset_linemod('eval', num_points, False, opt.dataset_root, 0.0, True)
-points, choose, img, target, model_points, idx, original_image, original_model = data.get_item(randint(0, 1000))
+points, choose, img, target, model_points, idx, original_image, original_model = data.get_item(randint(100, 100))
 
 # print(points.size())
 # print(choose.size())
@@ -69,8 +69,41 @@ my_pred = np.append(my_r, my_t)
 print("rotation vector", my_r)
 print("translation vector", my_t)
 
+
+### REFINEMENT ###
+
+if refinement:
+    for ite in range(0, iteration):
+        T = Variable(torch.from_numpy(my_t.astype(np.float32))) \
+            .cuda().view(1, 3).repeat(num_points, 1).contiguous().view(1, num_points, 3)
+
+        my_mat = quaternion_matrix(my_r)
+        R = Variable(torch.from_numpy(my_mat[:3, :3].astype(np.float32))).cuda().view(1, 3, 3)
+        my_mat[0:3, 3] = my_t
+
+        new_points = torch.bmm((points - T), R).contiguous()
+        pred_r, pred_t = refiner(new_points, emb, idx)
+        pred_r = pred_r.view(1, 1, -1)
+        pred_r = pred_r / (torch.norm(pred_r, dim=2).view(1, 1, 1))
+        my_r_2 = pred_r.view(-1).cpu().data.numpy()
+        my_t_2 = pred_t.view(-1).cpu().data.numpy()
+        my_mat_2 = quaternion_matrix(my_r_2)
+        my_mat_2[0:3, 3] = my_t_2
+
+        my_mat_final = np.dot(my_mat, my_mat_2)
+        my_r_final = copy.deepcopy(my_mat_final)
+        my_r_final[0:3, 3] = 0
+        my_r_final = quaternion_from_matrix(my_r_final, True)
+        my_t_final = np.array([my_mat_final[0][3], my_mat_final[1][3], my_mat_final[2][3]])
+
+        my_pred = np.append(my_r_final, my_t_final)
+        my_r = my_r_final
+        my_t = my_t_final
+
+
 ### DRAW MODEL PREDICTED ###
-std_cloud_point = np.transpose(original_model)#[[1, 2, 0], :]
+
+std_cloud_point = np.transpose(original_model)
 
 obj_coord = (convert_coordinates(my_pred, std_cloud_point))
 obj_coord2d = convert3dpointto2d(obj_coord)

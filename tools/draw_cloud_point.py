@@ -1,5 +1,4 @@
 import math
-
 import numpy as np
 
 
@@ -50,14 +49,8 @@ def convert_coordinates(six_dof, camera_coord):
     quaternion = six_dof[0:4]
     transl = six_dof[4:7]
 
-    # print("quaternion", quaternion)
-    # print("transl", transl)
-
     n_quaternion = normalize_quaternion(quaternion)
-    # print("normalized quaternion", n_quaternion)
-
     rotation_matrix = q_to_matrix(n_quaternion)
-    # print(rotation_matrix)
 
     n, m = (np.shape(camera_coord))
     objcoord = np.zeros(shape=(n, m))
@@ -68,30 +61,6 @@ def convert_coordinates(six_dof, camera_coord):
     t_matrix[3, 3] = 1
     t_matrix[0:3, 3] = transl
     print(t_matrix)
-    # - cam_R_m2c: [0.08260540, 0.98752999, -0.13401900, 0.74214798, -0.15070900, -0.65307200, -0.66512603, -0.04551440,
-    #               -0.74534303]
-    # cam_t_m2c: [142.58925727, -133.41315293, 1000.32204526]
-
-    # t_matrix[0, 0] = 0.08260540
-    # t_matrix[0, 1] = 0.98752999
-    # t_matrix[0, 2] = -0.13401900
-    # t_matrix[1, 0] = 0.74214798
-    # t_matrix[1, 1] = -0.15070900
-    # t_matrix[1, 2] = -0.65307200
-    # t_matrix[2, 0] = -0.6651260
-    # t_matrix[2, 1] = -0.04551440
-    # t_matrix[2, 2] = -0.74534303
-    # t_matrix[0, 3] =0.14258925727
-    # t_matrix[1, 3] =-0.13341315293
-    # t_matrix[2, 3] =1.00032204526
-    # print("eheheh\n" ,t_matrix)
-    # # print(camera_coord[:,0])
-    # print(camera_coord[:,10])
-    # print(camera_coord[:,20])
-    # print(camera_coord[:,30])
-
-
-
 
     for i in range(m):
         d = camera_coord[:, i]
@@ -111,6 +80,5 @@ def convert3dpointto2d(coord3d):
 
         coord2d[0, i] = coord3d[0, i] * 640 / coord3d[2, i] * magn + 320
         coord2d[1, i] = coord3d[1, i] * 480 / coord3d[2, i] * magn + 240
-        # coord2d[0, i] = (coord3d[0, i] * 640) / (2.0 * coord3d[2, i]) + 320
-        # coord2d[1, i] = (coord3d[1, i] * 480) / (2.0 * coord3d[2, i]) + 240
+
     return coord2d
