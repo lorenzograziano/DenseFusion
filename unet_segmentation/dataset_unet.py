@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import torch
 import torch.utils.data as data
 from PIL import Image, ImageOps
 
@@ -42,34 +43,34 @@ class LinemodDataset(data.Dataset):
         # converting to grayscale because of output of network
 
         # Data augmentation based on t
+        if t == 0:
+            img = img.resize((320, 240))
+            label = label.resize((320, 240))
 
         if t == 1:
             # h axis
             img = ImageOps.mirror(img)
             label = ImageOps.mirror(label)
-
+            img = img.resize((320, 240))
+            label = label.resize((320, 240))
         if t == 2:
             # v axis
             img = img.crop((160, 120, 480, 360))
             label = label.crop((160, 120, 480, 360))
             img = ImageOps.mirror(img)
             label = ImageOps.mirror(label)
-            img = img.resize((640, 480))
-            label = label.resize((640, 480))
 
         if t == 3:
             # cropping
             img = img.crop((160, 120, 480, 360))
             label = label.crop((160, 120, 480, 360))
-            img = img.resize((640, 480))
-            label = label.resize((640, 480))
 
         if t == 4:
             # cropping
-            img = img.crop((80, 60, 560, 420))
-            label = label.crop((80, 60, 560, 420))
-            img = img.resize((640, 480))
-            label = label.resize((640, 480))
+            img = img.crop((80,60,560,420))
+            label = label.crop((80,60,560,420))
+            img = img.resize((320, 240))
+            label = label.resize((320, 240))
 
         if t == 5:
             # cropping
@@ -77,13 +78,13 @@ class LinemodDataset(data.Dataset):
             label = label.crop((80, 60, 560, 420))
             img = ImageOps.mirror(img)
             label = ImageOps.mirror(label)
-            img = img.resize((640, 480))
-            label = label.resize((640, 480))
+            img = img.resize((320, 240))
+            label = label.resize((320, 240))
 
         img = (np.array(img).astype(np.float32) - 127.5) / 255
         label = np.array(label).astype(np.float32) / 255
 
-        return img.reshape((3, img.shape[0], img.shape[1])), label.reshape((1, label.shape[0], label.shape[1]))
+        return torch.from_numpy(img.reshape((3, img.shape[0], img.shape[1]))), torch.from_numpy(label.reshape((1, label.shape[0], label.shape[1])))
 
     def __len__(self):
         return self.length

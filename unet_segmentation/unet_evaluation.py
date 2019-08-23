@@ -52,7 +52,7 @@ for i, data in enumerate(testloader, 0):
 
         outputs = outputs.cpu().detach().numpy()[0, 0, :, :] > 0.49
         labels = labels.cpu().detach().numpy()[0, 0, :, :]
-        inputs = (inputs.cpu().detach().numpy()[0, :, :, :]).reshape((480, 640, 3))
+        inputs = (inputs.cpu().detach().numpy()[0, :, :, :]).reshape((240, 320, 3))
 
         out = Image.fromarray(np.uint8(outputs * 255))
         lab = Image.fromarray(np.uint8(labels * 255))
